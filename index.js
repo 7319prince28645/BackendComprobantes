@@ -48,11 +48,11 @@ async function obtenerToken() {
   }
 }
 let archivo = null;
-let archivoListo = false;
 async function validarComprobante() {
   try {
     const token = await obtenerToken();
     const data = await archivo;
+
     if (!token) {
       throw new Error("No se pudo obtener el token");
     }
@@ -65,23 +65,35 @@ async function validarComprobante() {
         "TS012c881c=019edc9eb86a210574fef57c676d1807717eb303f3c75f74ae29d2c3e22635b1053d6fddbed86c96d128d99cbb52f83eca87f85027",
     };
 
+    const tamañoLote = 40; // Puedes ajustar este valor
+    let resultados = [];
+ 
     // Usar Promise.all para enviar solicitudes en paralelo
-    const promises = data.map((item) => {
-      const requestOptions = {
-        method: "POST",
-        headers: myHeaders,
-        data: item,
-        url: "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/20611460873/validarcomprobante",
-      };
-      return axios(requestOptions).then((response) => response.data);
-    });
+    for (let i = 0; i < data.length; i += tamañoLote) {
+      const lote = data.slice(i, i + tamañoLote);
+      const promesas = await lote.map((item) => {
+        const requestOptions = {
+          method: "POST",
+          headers: myHeaders,
+          data: item,
+          url: "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/20611460873/validarcomprobante",
+        };
+        return axios(requestOptions).then((response) => response.data);
+      });
 
-    // Esperar a que todas las promesas se resuelvan
-    const resultados = await Promise.all(promises);
+      const resultadosLote = await Promise.all(promesas);
+      resultados =  [...resultados, ...resultadosLote];
+
+
+      console.log(resultados);
+      // Opcional: pausa entre lotes
+      
+    }
+
     return resultados;
   } catch (error) {
-    console.error("Error:", error);
-    return null;
+    throw error;
+  
   }
 }
 // Ruta para validar el comprobante
@@ -99,9 +111,10 @@ app.get("/validar-comprobante", async (req, res) => {
   }
   try {
     const resultadoValidacion = await validarComprobante();
-    res.send({ resultadoValidacion, archivo});
+    res.send({ resultadoValidacion, archivo });
   } catch (error) {
-    res.status(500).send("Error al validar el comprobanteeeeeeee");
+    
+    res.status(500).send({ message: "Error al validar el comprobante" });
   }
 });
 app.listen(PORT, () => {
