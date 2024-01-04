@@ -8,31 +8,48 @@ function procesarArchivoExcel(filename, ruc) {
   const sheet = workbook.Sheets[sheetName];
   const data = xlsx.utils.sheet_to_json(sheet);
   const datos = [];
+  function ExcelSerialDateToDate(serial) {
+    // Fecha base de Excel (1 de enero de 1900)
+    const excelBaseDate = new Date(1900, 0, 1);
 
-  for (const item of data.slice(4)) {
-    if (typeof item.__EMPTY_1 === "string" && item.__EMPTY_1.includes("/")) {
-      const fechaParts = item.__EMPTY_1.split("/");
-      if (fechaParts.length === 3) {
-        const fechaEmisionFormateada = `${item.__EMPTY_1}`;
-        datos.push({
-          numRuc: String(ruc),
-          codComp: item.__EMPTY_3,
-          numeroSerie: item.__EMPTY_4,
-          numero: String(item.__EMPTY_5),
-          fechaEmision: fechaEmisionFormateada,
-          monto: String(item.__EMPTY_18),
-        });
-        console.log(datos.length);
-      } else {
-        console.error("Formato de fecha inesperado:", item.__EMPTY_1);
-      }
-    } else {
-      console.error(
-        "item.__EMPTY_1 no es un string válido o no tiene el formato esperado"
-      );
+    // Corregir el bug de Excel que cuenta el año 1900 como bisiesto
+    const dayCorrection = serial > 60 ? -2 : -1;
+
+    // Convertir el número serial en milisegundos
+    const milliseconds = (serial + dayCorrection) * 86400000; // Días a ms
+
+    // Crear la nueva fecha
+    const date = new Date(excelBaseDate.getTime() + milliseconds);
+
+    return date;
+}
+function formatDate(date) {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Enero es 0
+  const year = date.getFullYear();
+
+  return `${day}/${month}/${year}`;
+}
+
+  for (const item of data) {
+    let fechaEmision = item.fechaEmision;
+    
+    let montoFormateado = parseFloat(item.monto).toFixed(2);
+    let numeroSerie = item.numeroSerie ? item.numeroSerie.substring(0, 4): '';
+    let numero =  typeof item.numero === "number" ?  item.numero : item.numero.toString().substring(5);
+    if (typeof fechaEmision === "number") {
+      const data = ExcelSerialDateToDate(fechaEmision);
+      fechaEmision = formatDate(data);
     }
+    datos.push({
+      numRuc: ruc,
+      codComp: item.codComp,
+      numeroSerie: numeroSerie,
+      numero: `${numero}`,
+      fechaEmision: fechaEmision,
+      monto: montoFormateado,
+    });
   }
-
   return datos;
 }
 
