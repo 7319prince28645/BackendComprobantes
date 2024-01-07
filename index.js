@@ -1,5 +1,6 @@
 const express = require("express");
 const axios = require("axios");
+const ConsultaRuc = require("./ComprobantesSunat");
 const procesarArchivoExcel = require("./probar");
 const cors = require("cors");
 const app = express();
@@ -85,7 +86,6 @@ async function validarComprobante() {
       resultados =  [...resultados, ...resultadosLote];
 
 
-      console.log(resultados);
       // Opcional: pausa entre lotes
       
     }
@@ -97,12 +97,12 @@ async function validarComprobante() {
   }
 }
 // Ruta para validar el comprobante
+let ruc = null;
 app.post("/recibir-datos", upload.single("file"), (req, res) => {
   console.log("Archivo recibido:", req.file);
   console.log("Datos adicionales recibidos:", req.body);
+  ruc = req.body.ruc;
   archivo = procesarArchivoExcel(req.file.originalname, req.body.ruc);
-  console.log(req.file.originalname);
-
   res.send("Archivo recibido con éxito");
 });
 app.get("/validar-comprobante", async (req, res) => {
@@ -111,7 +111,8 @@ app.get("/validar-comprobante", async (req, res) => {
   }
   try {
     const resultadoValidacion = await validarComprobante();
-    res.send({ resultadoValidacion, archivo });
+    const datosDelRuc = await ConsultaRuc(ruc);
+    res.send({ resultadoValidacion, archivo, datosDelRuc });
   } catch (error) {
     
     res.status(500).send({ message: "Error al validar el comprobante" });
