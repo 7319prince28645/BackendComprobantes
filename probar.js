@@ -35,7 +35,7 @@ function procesarArchivoExcel(filename, ruc) {
       const month = matches[2];
       const day = matches[3];
 
-      // Convierte al formato DD/MM/YYYY
+      // Convierte formato DD/MM/YYYY
       return `${day}/${month}/${year}`;
     }
 
