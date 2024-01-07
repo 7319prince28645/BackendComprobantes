@@ -52,13 +52,11 @@ function procesarArchivoExcel(filename, ruc) {
 
   for (const item of data) {
     let fechaEmision = item.fechaEmision;
-
+    let codComp =
+      typeof item.codComp === "number" ? `0${item.codComp}` : item.codComp;
     let montoFormateado = parseFloat(item.monto).toFixed(2);
     let numeroSerie = item.numeroSerie ? item.numeroSerie.substring(0, 4) : "";
-    let numero =
-      typeof item.numero === "number"
-        ? item.numero
-        : item.numero.toString().substring(5);
+    let numero = typeof item.numero === "number" ? item.numero : (item.numero ? item.numero.toString().substring(5) : "");
     if (typeof fechaEmision === "number") {
       fechaEmision = formatDate(ExcelSerialDateToDate(fechaEmision));
     } else if (typeof fechaEmision === "string") {
@@ -67,7 +65,7 @@ function procesarArchivoExcel(filename, ruc) {
 
     datos.push({
       numRuc: ruc,
-      codComp: item.codComp,
+      codComp: codComp,
       numeroSerie: numeroSerie,
       numero: `${numero}`,
       fechaEmision: fechaEmision,
