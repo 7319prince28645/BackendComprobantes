@@ -2,7 +2,7 @@ const xlsx = require("xlsx");
 const path = require("path");
 // Ruta al archivo Excel
 function procesarArchivoExcel(filename, ruc) {
-  const filePath =path.join(__dirname,`./uploads/${filename}`);
+  const filePath = path.join(__dirname, `./uploads/${filename}`);
   const workbook = xlsx.readFile(filePath);
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -22,25 +22,49 @@ function procesarArchivoExcel(filename, ruc) {
     const date = new Date(excelBaseDate.getTime() + milliseconds);
 
     return date;
-}
-function formatDate(date) {
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Enero es 0
-  const year = date.getFullYear();
+  }
+  function convertirFecha(fechaConHora) {
+    const [fecha, hora] = fechaConHora.split(" ");
+    // Verifica si la fecha coincide con el formato YYYY-MM-DD o YYYY/MM/DD
+    const regex = /^(\d{4})[-/](\d{2})[-/](\d{2})$/;
+    const matches = fecha.match(regex);
 
-  return `${day}/${month}/${year}`;
-}
+    if (matches) {
+      // Extrae las partes de la fecha
+      const year = matches[1];
+      const month = matches[2];
+      const day = matches[3];
+
+      // Convierte al formato DD/MM/YYYY
+      return `${day}/${month}/${year}`;
+    }
+
+    // Si no es un formato reconocido, devuelve la fecha original
+    return fechaConHora;
+  }
+  function formatDate(date) {
+    const day = date.getDate().toString().padStart(2, "0");
+    const month = (date.getMonth() + 1).toString().padStart(2, "0"); // Enero es 0
+    const year = date.getFullYear();
+
+    return `${day}/${month}/${year}`;
+  }
 
   for (const item of data) {
     let fechaEmision = item.fechaEmision;
-    
+
     let montoFormateado = parseFloat(item.monto).toFixed(2);
-    let numeroSerie = item.numeroSerie ? item.numeroSerie.substring(0, 4): '';
-    let numero =  typeof item.numero === "number" ?  item.numero : item.numero.toString().substring(5);
+    let numeroSerie = item.numeroSerie ? item.numeroSerie.substring(0, 4) : "";
+    let numero =
+      typeof item.numero === "number"
+        ? item.numero
+        : item.numero.toString().substring(5);
     if (typeof fechaEmision === "number") {
-      const data = ExcelSerialDateToDate(fechaEmision);
-      fechaEmision = formatDate(data);
+      fechaEmision = formatDate(ExcelSerialDateToDate(fechaEmision));
+    } else if (typeof fechaEmision === "string") {
+      fechaEmision = convertirFecha(fechaEmision);
     }
+
     datos.push({
       numRuc: ruc,
       codComp: item.codComp,
@@ -49,8 +73,8 @@ function formatDate(date) {
       fechaEmision: fechaEmision,
       monto: montoFormateado,
     });
+    console.log(datos);
   }
   return datos;
 }
-
 module.exports = procesarArchivoExcel;
