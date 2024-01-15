@@ -78,51 +78,6 @@ function procesarArchivoExcel(buffer, ruc) {
   }
   return datos;
 }
-
-async function validarComprobante(data) {
-  try {
-    const token = await obtenerToken();
-
-    if (!token) {
-      throw new Error("No se pudo obtener el token");
-    }
-
-    const myHeaders = {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-      // Asegúrate de que necesitas la cookie aquí
-      Cookie:
-        "TS012c881c=019edc9eb86a210574fef57c676d1807717eb303f3c75f74ae29d2c3e22635b1053d6fddbed86c96d128d99cbb52f83eca87f85027",
-    };
-
-    const tamañoLote = 40; // Puedes ajustar este valor
-    let resultados = [];
-
-    // Usar Promise.all para enviar solicitudes en paralelo
-    for (let i = 0; i < data.length; i += tamañoLote) {
-      const lote = data.slice(i, i + tamañoLote);
-      const promesas = await lote.map((item) => {
-        const requestOptions = {
-          method: "POST",
-          headers: myHeaders,
-          data: item,
-          url: "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/20611460873/validarcomprobante",
-        };
-        return axios(requestOptions).then((response) => response.data);
-      });
-
-      const resultadosLote = await Promise.all(promesas);
-      resultados = [...resultados, ...resultadosLote];
-
-      // Opcional: pausa entre lotes
-    }
-
-    return resultados;
-  } catch (error) {
-    throw error;
-  }
-}
-
 async function obtenerToken() {
   try {
     const myHeaders = {
@@ -150,13 +105,80 @@ async function obtenerToken() {
     const response = await axios(requestOptions);
     return response.data.access_token;
   } catch (error) {
-  
     return null;
+  }
+}
+
+async function solicitarConReintento(item, myHeaders, intentosMaximos = 5) {
+  try {
+    const requestOptions = {
+      method: "POST",
+      headers: myHeaders,
+      data: item,
+      url: "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes/20611460873/validarcomprobante",
+    };
+    const response = await axios(requestOptions);
+    if (
+      response.data &&
+      Object.keys(response.data).length === 0 &&
+      intentosMaximos > 0
+    ) {
+      console.log("Data vacío, intentando de nuevo...");
+      return solicitarConReintento(item, myHeaders, intentosMaximos - 1);
+    }
+    return response.data;
+  } catch (error) {
+    console.error(error);
+    if (intentosMaximos > 0) {
+      console.log("Error en la solicitud, intentando de nuevo...");
+      return solicitarConReintento(item, myHeaders, intentosMaximos - 1);
+    }
+    // Devuelve un objeto de error o null para que puedas identificarlo después
+    return { error: true, item };
+  }
+}
+
+async function validarComprobante(data) {
+  try {
+    const token = await obtenerToken();
+
+    if (!token) {
+      throw new Error("No se pudo obtener el token");
+    }
+
+    const myHeaders = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      // Asumiendo que la cookie es necesaria aquí
+      Cookie:
+        "TS012c881c=019edc9eb86a210574fef57c676d1807717eb303f3c75f74ae29d2c3e22635b1053d6fddbed86c96d128d99cbb52f83eca87f85027",
+    };
+
+    const tamañoLote = 20; // Ajusta según sea necesario
+    let resultados = [];
+
+    for (let i = 0; i < data.length; i += tamañoLote) {
+      const lote = data.slice(i, i + tamañoLote);
+      const promesas = lote.map((item) =>
+        solicitarConReintento(item, myHeaders)
+      );
+
+      const resultadosLote = await Promise.all(promesas);
+      resultados = resultados.concat(resultadosLote.filter((r) => !r.error));
+
+      // Opcional: pausa entre lotes
+      // await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    console.log("resultados", resultados);
+    return resultados;
+  } catch (error) {
+    console.error("Error en validarComprobante: ", error);
+    throw error;
   }
 }
 
 module.exports = {
   validarComprobante,
   obtenerToken,
-  procesarArchivoExcel
+  procesarArchivoExcel,
 };
