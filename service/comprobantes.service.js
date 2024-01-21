@@ -1,7 +1,7 @@
 const xlsx = require("xlsx");
 const axios = require("axios");
 
-function procesarArchivoExcel(buffer, ruc) {
+function procesarArchivoExcel({ buffer, ruc, changeEstate }) {
   const workbook = xlsx.read(buffer);
   const sheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[sheetName];
@@ -48,19 +48,29 @@ function procesarArchivoExcel(buffer, ruc) {
 
     return `${day}/${month}/${year}`;
   }
-
   for (const item of data) {
     let fechaEmision = item.fechaEmision;
     let codComp =
-      typeof item.codComp === "number" ? `0${item.codComp}` : item.codComp;
+      changeEstate === "true"
+        ? item.codComp.slice(0, 2)
+        : typeof item.codComp === "number"
+        ? item.codComp < 10
+          ? `0${item.codComp}`
+          : `${item.codComp}`
+        : item.codComp;
     let montoFormateado = parseFloat(item.monto).toFixed(2);
-    let numeroSerie = item.numeroSerie ? item.numeroSerie.substring(0, 4) : "";
-    let numero =
-      typeof item.numero === "number"
-        ? item.numero
-        : item.numero
-        ? item.numero.toString().substring(5)
+    let numeroSerie =
+      changeEstate === "true"
+        ? item.numeroSerie.slice(3, 7)
+        : item.numeroSerie
+        ? item.numeroSerie.substring(0, 4)
         : "";
+    let numero =
+      changeEstate === "true"
+        ? item.numeroSerie.slice(8)
+        : (typeof item.numero === "number"
+        ? `${item.numero}`
+        : item.numero);
     if (typeof fechaEmision === "number") {
       fechaEmision = formatDate(ExcelSerialDateToDate(fechaEmision));
     } else if (typeof fechaEmision === "string") {
@@ -68,10 +78,10 @@ function procesarArchivoExcel(buffer, ruc) {
     }
 
     datos.push({
-      numRuc: ruc,
+      numRuc: changeEstate === "true" ? item.numRuc : ruc,
       codComp: codComp,
       numeroSerie: numeroSerie,
-      numero: `${numero}`,
+      numero: numero,
       fechaEmision: fechaEmision,
       monto: montoFormateado,
     });
@@ -169,7 +179,7 @@ async function validarComprobante(data) {
       // Opcional: pausa entre lotes
       // await new Promise(resolve => setTimeout(resolve, 1000));
     }
-    console.log("resultados", resultados);
+
     return resultados;
   } catch (error) {
     console.error("Error en validarComprobante: ", error);

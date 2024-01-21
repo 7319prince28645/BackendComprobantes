@@ -6,6 +6,7 @@ const ConsultaRuc = require("../service/ruc.service");
 
 router.post("/recibir-datos", upload.single("file"), async (req, res) => {
   const ruc = req.body.ruc;
+  const changeEstate = req.body.changeEstate;
   if(!req.file){
     return res.status(400).json({message: "No se envió un archivo"});
   }
@@ -13,7 +14,7 @@ router.post("/recibir-datos", upload.single("file"), async (req, res) => {
     return res.status(400).json({message: "No se envió el ruc"});
   }
   
-  const data =  procesarArchivoExcel(req.file.buffer, ruc);
+  const data =  procesarArchivoExcel({buffer: req.file.buffer, ruc, changeEstate});
   const resultadoValidacion = await validarComprobante(data);
   const datosDelRuc = await ConsultaRuc(ruc);
   res.json({
