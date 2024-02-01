@@ -70,7 +70,7 @@ function procesarArchivoExcel({ buffer, ruc, changeEstate }) {
         ? item.numeroSerie.slice(8)
         : (typeof item.numero === "number"
         ? `${item.numero}`
-        : item.numero);
+        : item.numero.slice(5));
     if (typeof fechaEmision === "number") {
       fechaEmision = formatDate(ExcelSerialDateToDate(fechaEmision));
     } else if (typeof fechaEmision === "string") {
