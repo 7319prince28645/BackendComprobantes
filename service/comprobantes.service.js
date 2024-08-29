@@ -102,20 +102,20 @@ async function obtenerToken() {
       "scope",
       "https://api.sunat.gob.pe/v1/contribuyente/contribuyentes"
     );
-    urlencoded.append("client_id", "06f30e41-1c42-4e1a-abbe-7d849af8aa93");
-    urlencoded.append("client_secret", "1Hl9NyUHA8m/cJX1/fw5/g==");
+    urlencoded.append("client_id", "acdb44af-f8a0-463f-bb36-e81083efcda2");
+    urlencoded.append("client_secret", "uT9ZRVkrqUhlnxMtpXrN+w==");
 
     const requestOptions = {
       method: "POST",
       headers: myHeaders,
       data: urlencoded,
-      url: "https://api-seguridad.sunat.gob.pe/v1/clientesextranet/06f30e41-1c42-4e1a-abbe-7d849af8aa93/oauth2/token/",
+      url: "https://api-seguridad.sunat.gob.pe/v1/clientesextranet/acdb44af-f8a0-463f-bb36-e81083efcda2/oauth2/token/",
     };
 
     const response = await axios(requestOptions);
+    console.log("Token obtenido respuesta: ", response);
     return response.data.access_token;
   } catch (error) {
-    return null;
   }
 }
 
@@ -151,7 +151,7 @@ async function solicitarConReintento(item, myHeaders, intentosMaximos = 5) {
 async function validarComprobante(data) {
   try {
     const token = await obtenerToken();
-
+    console.log("Token obtenido: ", token);
     if (!token) {
       throw new Error("No se pudo obtener el token");
     }
